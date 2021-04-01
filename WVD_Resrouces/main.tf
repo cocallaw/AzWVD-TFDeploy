@@ -12,16 +12,22 @@ provider "azurerm" {
   features {}
 }
 
-# Create Resource Group
-resource "azurerm_resource_group" "default" {
+#----------------------------------
+# Resource Group
+#----------------------------------
+resource "azurerm_resource_group" "rgwvd01" {
   name     = var.rgname
   location = var.region
 }
 
+#----------------------------------
+# WVD Resources
+#----------------------------------
+
 # Create WVD Host Pool that is a Pooled Type
 resource "azurerm_virtual_desktop_host_pool" "wvdpool01" {
   location            = var.region
-  resource_group_name = azurerm_resource_group.default.name
+  resource_group_name = azurerm_resource_group.rgwvd01.name
   name                     = var.pooledhpname
   friendly_name            = var.pooledhpfriendlyname
   description              = var.pooledhpdescription
@@ -38,7 +44,7 @@ resource "azurerm_virtual_desktop_host_pool" "wvdpool01" {
 resource "azurerm_virtual_desktop_application_group" "wvdpool01DAG" {
   name                = var.pooledhpdesktopappname
   location            = var.region
-  resource_group_name = azurerm_resource_group.default.name
+  resource_group_name = azurerm_resource_group.rgwvd01.name
 
   type          = "Desktop"
   host_pool_id  = azurerm_virtual_desktop_host_pool.wvdpool01.id
@@ -50,7 +56,7 @@ resource "azurerm_virtual_desktop_application_group" "wvdpool01DAG" {
 resource "azurerm_virtual_desktop_application_group" "wvdpool01AppG" {
   name                = var.pooledhpremoteappname
   location            = var.region
-  resource_group_name = azurerm_resource_group.default.name
+  resource_group_name = azurerm_resource_group.rgwvd01.name
 
   type          = "RemoteApp"
   host_pool_id  = azurerm_virtual_desktop_host_pool.wvdpool01.id
@@ -62,7 +68,7 @@ resource "azurerm_virtual_desktop_application_group" "wvdpool01AppG" {
 resource "azurerm_virtual_desktop_workspace" "workspace" {
   name                = var.workspace
   location            = var.region
-  resource_group_name = azurerm_resource_group.default.name
+  resource_group_name = azurerm_resource_group.rgwvd01.name
 
   friendly_name = var.workspacefriendlyname
   description   = var.workspacedesc
