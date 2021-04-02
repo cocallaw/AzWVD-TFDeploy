@@ -8,6 +8,11 @@ variable "region" {
   default     = "East US"
 }
 
+variable "wvdhostcount" {
+  description = "Number of WVD hosts to deploy"
+  default     = 2
+}
+
 variable "pooledhpname" {
   description = "Pooled Host Pool Name"
   default     = "HP01-Pooled"
@@ -66,4 +71,9 @@ variable "workspacefriendlyname" {
 variable "workspacedesc" {
   description = "WVD Workspace Description"
   default     = "A Workspace for HP01"
+}
+
+variable "wvdvmbasename" {
+  description = "WVD Base Name Sceme"
+  default     = "wvdtf"
 }

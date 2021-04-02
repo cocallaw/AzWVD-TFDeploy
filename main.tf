@@ -79,7 +79,6 @@ resource "azurerm_virtual_desktop_workspace_application_group_association" "work
 resource "azurerm_virtual_desktop_workspace_application_group_association" "workspacedesktop" {
   workspace_id         = azurerm_virtual_desktop_workspace.workspace.id
   application_group_id = azurerm_virtual_desktop_application_group.wvdpool01DAG.id
-
 }
 
 #----------------------------------
@@ -87,15 +86,15 @@ resource "azurerm_virtual_desktop_workspace_application_group_association" "work
 #----------------------------------
 
 # refer to a resource group
-data "azurerm_resource_group" "test" {
-  name = "nancyResourceGroup"
+data "azurerm_resource_group" "rgvnet" {
+  name = "Contoso-Lab-Networking"
 }
 
 #refer to a subnet
-data "azurerm_subnet" "test" {
-  name                 = "mySubnet"
-  virtual_network_name = "myVnet"
-  resource_group_name  = "nancyResourceGroup"
+data "azurerm_subnet" "subnet" {
+  name                 = "subnet"
+  virtual_network_name = "vnet-contoso-lab"
+  resource_group_name  = "Contoso-Lab-Networking"
 }
 
 #----------------------------------
@@ -103,33 +102,35 @@ data "azurerm_subnet" "test" {
 #----------------------------------
 
 # Create a NIC for the Session Host VM
-resource "azurerm_network_interface" "wvd_vm1_nic" {
-  name                = "NicNameGoesHere"
+resource "azurerm_network_interface" "wvd_vm_nic" {
+  count = var.wvdhostcount
+  name                = "${var.wvdvmbasename}-nic-${count.index}"
   resource_group_name = azurerm_resource_group.rgwvd01.name
   location            = azurerm_resource_group.rgwvd01.location
 
   ip_configuration {
-    name                          = "IpConfigNameGoesHere"
-    subnet_id                     = "Azure Subnet ID to attach the NIC to"
+    name                          = "IpConfig01"
+    subnet_id                     = data.azurerm_subnet.subnet.id
     private_ip_address_allocation = "dynamic"
   }
 }
 
 # Create the Session Host VM
-resource "azurerm_windows_virtual_machine" "wvd_vm1" {
-  name                  = "VMNameGoesHere"
+resource "azurerm_windows_virtual_machine" "wvd_vm" {
+  count = var.wvdhostcount
+  name                  = "${var.wvdvmbasename}-${count.index}"
   resource_group_name   = azurerm_resource_group.rgwvd01.name
   location              = azurerm_resource_group.rgwvd01.location
-  size                  = "Standard_B1s"
-  network_interface_ids = [ azurerm_network_interface.wvd_vm1_nic.id ]
+  size                  = "Standard_DS3_v2"
+  network_interface_ids = [ azurerm_network_interface.wvd_vm_nic.*.id[count.index] ]
   provision_vm_agent    = true
-  timezone              = "Central Standard Time"
+  timezone              = "Eastern Standard Time"
   
-  admin_username = "localadmin"
-  admin_password = "LocalPass2021"
+  admin_username = "wvdlocaladmin"
+  admin_password = "SuperSecretWVD123"
     
   os_disk {
-    name                 = "DiskNameGoesHere"
+    name                 = "OSDisk-${count.index}"
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
   }
@@ -147,9 +148,10 @@ resource "azurerm_windows_virtual_machine" "wvd_vm1" {
 }
 
 # VM Extension for Domain-join
-resource "azurerm_virtual_machine_extension" "vm1ext_domain_join" {
-  name                       = "ExtensionName1GoesHere"
-  virtual_machine_id         = azurerm_windows_virtual_machine.wvd_vm1.id
+resource "azurerm_virtual_machine_extension" "vmext_domain_join" {
+  count = var.wvdhostcount
+  name                       = "domainjoinext"
+  virtual_machine_id         = azurerm_windows_virtual_machine.wvd_vm.*.id[count.index]
   publisher                  = "Microsoft.Compute"
   type                       = "JsonADDomainExtension"
   type_handler_version       = "1.3"
@@ -157,9 +159,9 @@ resource "azurerm_virtual_machine_extension" "vm1ext_domain_join" {
 
   settings = <<-SETTINGS
     {
-      "Name": "domain.com",
-      "OUPath": "OU=secondlevel,OU=firstlevel,DC=domain,DC=com",
-      "User": "AdminUsername@domain.com",
+      "Name": "contoso.com",
+      "OUPath": "CN=Computers,DC=contoso,DC=com",
+      "User": "user@contoso.com",
       "Restart": "true",
       "Options": "3"
     }
@@ -167,7 +169,7 @@ resource "azurerm_virtual_machine_extension" "vm1ext_domain_join" {
 
   protected_settings = <<-PSETTINGS
     {
-      "Password":"AdminPasswordGoesHere"
+      "Password":" "
     }
     PSETTINGS
 
@@ -178,8 +180,9 @@ resource "azurerm_virtual_machine_extension" "vm1ext_domain_join" {
 
 # VM Extension for Desired State Config
 resource "azurerm_virtual_machine_extension" "vm1ext_dsc" {
+  count = var.wvdhostcount
   name                       = "ExtensionName2GoesHere"
-  virtual_machine_id         = azurerm_windows_virtual_machine.wvd_vm1.id
+  virtual_machine_id         = azurerm_windows_virtual_machine.wvd_vm.*.id[count.index]
   publisher                  = "Microsoft.Powershell"
   type                       = "DSC"
   type_handler_version       = "2.73"
@@ -190,8 +193,8 @@ resource "azurerm_virtual_machine_extension" "vm1ext_dsc" {
       "modulesUrl": "https://wvdportalstorageblob.blob.core.windows.net/galleryartifacts/Configuration.zip",
       "configurationFunction": "Configuration.ps1\\AddSessionHost",
       "properties": {
-        "hostPoolName": "HostPool1NameGoesHere",
-        "registrationInfoToken": "${azurerm_virtual_desktop_host_pool.wvd_pool1.registration_info[0].token}"
+        "hostPoolName": "${var.pooledhpname}",
+        "registrationInfoToken": "${azurerm_virtual_desktop_host_pool.wvdpool01.registration_info[0].token}"
       }
     }
     SETTINGS
@@ -200,5 +203,5 @@ resource "azurerm_virtual_machine_extension" "vm1ext_dsc" {
     ignore_changes = [ settings ]
   }
 
-  depends_on = [ azurerm_virtual_machine_extension.ext_domain_join ]
+  depends_on = [ azurerm_virtual_machine_extension.vmext_domain_join ]
 }
