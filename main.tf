@@ -30,7 +30,7 @@ resource "azurerm_virtual_desktop_host_pool" "wvdpool01" {
   maximum_sessions_allowed = 10
 
   registration_info {
-    expiration_date = "2021-04-03T08:00:00Z" # Must be set to a time between 1 hour in the future & 27 days in the future
+    expiration_date = timeadd(timestamp(), "2h30m")  # Must be set to a time between 1 hour in the future & 27 days in the future
   }
 }
 
