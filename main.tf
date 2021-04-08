@@ -98,7 +98,7 @@ data "azurerm_subnet" "subnet" {
 }
 
 #----------------------------------
-# Session Host VM
+#  Create Session Host VM
 #----------------------------------
 
 # Create a NIC for the Session Host VM
@@ -147,38 +147,43 @@ resource "azurerm_windows_virtual_machine" "wvd_vm" {
   }
 }
 
-# VM Extension for Domain-join
+#----------------------------------
+# Join WVD Host to Active Directory Domain
+#----------------------------------
 resource "azurerm_virtual_machine_extension" "vmext_domain_join" {
-  count = var.wvdhostcount
-  name                       = "domainjoinext"
-  virtual_machine_id         = azurerm_windows_virtual_machine.wvd_vm.*.id[count.index]
-  publisher                  = "Microsoft.Compute"
-  type                       = "JsonADDomainExtension"
-  type_handler_version       = "1.3"
-  auto_upgrade_minor_version = true
+  count                = var.wvdhostcount
+  name                 = "join-domain"
+  virtual_machine_id   = azurerm_windows_virtual_machine.wvd_vm.*.id[count.index]
+  publisher            = "Microsoft.Compute"
+  type                 = "JsonADDomainExtension"
+  type_handler_version = "1.3"
+  
 
-  settings = <<-SETTINGS
-    {
-      "Name": "contoso.com",
-      "OUPath": "CN=Computers,DC=contoso,DC=com",
-      "User": "user@contoso.com",
-      "Restart": "true",
-      "Options": "3"
-    }
+  # NOTE: the `OUPath` field is intentionally blank, to put it in the Computers OU
+  settings = <<SETTINGS
+        {
+            "Name": "${var.active_directory_domain}",
+            "OUPath": "",
+            "User": "${var.active_directory_domain}\\${var.active_directory_username}",
+            "Restart": "true",
+            "Options": "3"
+        }
     SETTINGS
 
-  protected_settings = <<-PSETTINGS
-    {
-      "Password":" "
-    }
-    PSETTINGS
+  protected_settings = <<SETTINGS
+        {
+            "Password": "${var.active_directory_password}"
+        }
+    SETTINGS
 
   lifecycle {
     ignore_changes = [ settings, protected_settings ]
   }
 }
 
-# VM Extension for Desired State Config
+#----------------------------------
+# Perform DSC to configure WVD Host Agents
+#----------------------------------
 resource "azurerm_virtual_machine_extension" "vm1ext_dsc" {
   count = var.wvdhostcount
   name                       = "ExtensionName2GoesHere"
