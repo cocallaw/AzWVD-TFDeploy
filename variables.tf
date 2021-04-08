@@ -13,6 +13,21 @@ variable "wvdhostcount" {
   default     = 2
 }
 
+variable "active_directory_domain" {
+  description = "WIndows AD Domain to Join WVD Hosts to"
+  default     = "contoso.com"
+}
+
+variable "active_directory_username" {
+  description = "Windows AD uUsernam with permission to join machines to domain"
+  default     = "ADUser"
+}
+
+variable "active_directory_password" {
+  description = "Windows AD Password for account with permission to join machines to domain"
+  default     = "ADPassword"
+}
+
 variable "pooledhpname" {
   description = "Pooled Host Pool Name"
   default     = "HP01-Pooled"
