@@ -1,10 +1,10 @@
-variable "rgname" {
-  description = "Resource Group Name"
+variable "wvd_rg_name" {
+  description = "Name of Resource Group to be created for WVD resources"
   default     = "TF-WVD-RG"
 }
 
 variable "region" {
-  description = "Region"
+  description = "Region for all WVD resoures to be deployed into"
   default     = "East US"
 }
 

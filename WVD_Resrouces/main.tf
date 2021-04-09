@@ -16,7 +16,7 @@ provider "azurerm" {
 # Resource Group
 #----------------------------------
 resource "azurerm_resource_group" "rgwvd01" {
-  name     = var.rgname
+  name     = var.wvd_rg_name
   location = var.region
 }
 
