@@ -12,9 +12,9 @@ provider "azurerm" {
   features {}
 }
 
-# Create Resource Group
+# Create Resource Group for all resources
 resource "azurerm_resource_group" "rgwvd01" {
-  name     = var.rgname
+  name     = var.wvd_rg_name
   location = var.region
 }
 
@@ -27,7 +27,7 @@ resource "azurerm_virtual_desktop_host_pool" "wvdpool01" {
   description              = var.pooledhpdescription
   type                     = "Pooled"
   load_balancer_type       = "BreadthFirst" # Options: BreadthFirst / DepthFirst
-  maximum_sessions_allowed = 10
+  maximum_sessions_allowed = var.pooledhpsessionlimit
 
   registration_info {
     expiration_date = timeadd(timestamp(), "2h30m")  # Must be set to a time between 1 hour in the future & 27 days in the future
@@ -82,19 +82,14 @@ resource "azurerm_virtual_desktop_workspace_application_group_association" "work
 }
 
 #----------------------------------
-# Existing Network Data
+# Existing Virtual Network Data
 #----------------------------------
 
-# refer to a resource group
-data "azurerm_resource_group" "rgvnet" {
-  name = "Contoso-Lab-Networking"
-}
-
-#refer to a subnet
-data "azurerm_subnet" "subnet" {
-  name                 = "subnet"
-  virtual_network_name = "vnet-contoso-lab"
-  resource_group_name  = "Contoso-Lab-Networking"
+#refrence to existing subnet
+data "azurerm_subnet" "wvd_host_subnet" {
+  name                 = var.vnet_subnet_name
+  virtual_network_name = var.vnet_name
+  resource_group_name  = var.vnet_rg_name
 }
 
 #----------------------------------
@@ -103,28 +98,27 @@ data "azurerm_subnet" "subnet" {
 
 # Create a NIC for the Session Host VM
 resource "azurerm_network_interface" "wvd_vm_nic" {
-  count = var.wvdhostcount
+  count               = var.wvdhostcount
   name                = "${var.wvdvmbasename}-nic-${count.index}"
   resource_group_name = azurerm_resource_group.rgwvd01.name
   location            = azurerm_resource_group.rgwvd01.location
 
   ip_configuration {
     name                          = "IpConfig01"
-    subnet_id                     = data.azurerm_subnet.subnet.id
+    subnet_id                     = data.azurerm_subnet.wvd_host_subnet.id
     private_ip_address_allocation = "dynamic"
   }
 }
 
 # Create the Session Host VM
 resource "azurerm_windows_virtual_machine" "wvd_vm" {
-  count = var.wvdhostcount
+  count                 = var.wvdhostcount
   name                  = "${var.wvdvmbasename}-${count.index}"
   resource_group_name   = azurerm_resource_group.rgwvd01.name
   location              = azurerm_resource_group.rgwvd01.location
   size                  = "Standard_DS3_v2"
   network_interface_ids = [ azurerm_network_interface.wvd_vm_nic.*.id[count.index] ]
   provision_vm_agent    = true
-  timezone              = "Eastern Standard Time"
   
   admin_username = "wvdlocaladmin"
   admin_password = "SuperSecretWVD123"
@@ -184,9 +178,9 @@ resource "azurerm_virtual_machine_extension" "vmext_domain_join" {
 #----------------------------------
 # Perform DSC to configure WVD Host Agents
 #----------------------------------
-resource "azurerm_virtual_machine_extension" "vm1ext_dsc" {
-  count = var.wvdhostcount
-  name                       = "ExtensionName2GoesHere"
+resource "azurerm_virtual_machine_extension" "vmext_dsc" {
+  count                      = var.wvdhostcount
+  name                       = "DSC-Extension"
   virtual_machine_id         = azurerm_windows_virtual_machine.wvd_vm.*.id[count.index]
   publisher                  = "Microsoft.Powershell"
   type                       = "DSC"

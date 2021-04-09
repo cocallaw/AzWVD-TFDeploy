@@ -1,16 +1,31 @@
-variable "rgname" {
-  description = "Resource Group Name"
+variable "wvd_rg_name" {
+  description = "Name of Resource Group to be created for WVD resources"
   default     = "TF-WVD-RG"
 }
 
 variable "region" {
-  description = "Region"
+  description = "Region for all WVD resoures to be deployed into"
   default     = "East US"
 }
 
 variable "wvdhostcount" {
   description = "Number of WVD hosts to deploy"
   default     = 2
+}
+
+variable "vnet_rg_name" {
+  description = "Name of Resource Group containing existing VNet to be used by WVD Hosts"
+  default = "Contoso-Lab-Networking"
+}
+
+variable "vnet_name" {
+  description = "Name of exiting VNet resouce to be used by WVD Hosts"
+  default = "vnet-contoso-lab"
+}
+
+variable "vnet_subnet_name" {
+  description = "Name of existing Subnet to be used by WVD Hosts"
+  default = "subnet"
 }
 
 variable "active_directory_domain" {
@@ -31,6 +46,11 @@ variable "active_directory_password" {
 variable "pooledhpname" {
   description = "Pooled Host Pool Name"
   default     = "HP01-Pooled"
+}
+
+variable "pooledhpsessionlimit" {
+  description = "Maximum number of sessions per host in the pool"
+  default = 5
 }
 
 variable "pooledhpfriendlyname" {
