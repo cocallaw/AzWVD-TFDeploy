@@ -4,7 +4,7 @@ terraform {
     azurerm = {
       source  = "hashicorp/azurerm"
       # version = "2.31.1" Or Greater Required for WVD
-      version = "=2.46.0"
+      version = "=2.64.0"
     }
   }
 }
@@ -189,7 +189,7 @@ resource "azurerm_virtual_machine_extension" "vmext_dsc" {
   
   settings = <<-SETTINGS
     {
-      "modulesUrl": "https://wvdportalstorageblob.blob.core.windows.net/galleryartifacts/Configuration.zip",
+      "modulesUrl": "https://wvdportalstorageblob.blob.core.windows.net/galleryartifacts/Configuration_3-10-2021.zip",
       "configurationFunction": "Configuration.ps1\\AddSessionHost",
       "properties": {
         "hostPoolName": "${var.pooledhpname}",
