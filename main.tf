@@ -4,7 +4,7 @@ terraform {
     azurerm = {
       source  = "hashicorp/azurerm"
       # version = "2.31.1" Or Greater Required for WVD
-      version = "=2.46.0"
+      version = "=2.64.0"
     }
   }
 }
